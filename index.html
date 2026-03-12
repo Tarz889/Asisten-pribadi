@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Personal Assistant</title>
+    <style>
+        :root { --bg: #f8f9fa; --card: #ffffff; --text: #2d3436; --primary: #6c5ce7; --accent: #a29bfe; }
+        [data-theme="dark-soft"] { --bg: #1e272e; --card: #2f3640; --text: #f5f6fa; --primary: #00d2d3; --accent: #48dbfb; }
+        [data-theme="cyber"] { --bg: #0d0221; --card: #190e3d; --text: #00f7ff; --primary: #ff007f; --accent: #7a04eb; border: 1px solid var(--primary); text-shadow: 0 0 5px var(--primary); }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); padding: 10px; transition: 0.4s; margin: 0; overflow-x: hidden; }
+        .container { width: 100%; max-width: 500px; margin: auto; display: none; padding-bottom: 30px; } 
+        
+        #welcome-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); display: flex; justify-content: center; align-items: center; z-index: 2000; padding: 20px; }
+        .card { background: var(--card); padding: 18px; border-radius: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border: 1px solid rgba(128,128,128,0.1); }
+
+        header { text-align: center; margin-bottom: 20px; }
+        .theme-buttons { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+        button { padding: 12px 16px; border-radius: 12px; border: none; cursor: pointer; font-weight: bold; background: var(--primary); color: white; transition: 0.2s; font-size: 14px; }
+        
+        .schedule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .day-box { background: rgba(128,128,128,0.05); padding: 10px; border-radius: 12px; border-top: 4px solid var(--primary); }
+        .subject-tag { display: block; font-size: 0.75em; padding: 7px; margin: 4px 0; border-radius: 8px; background: rgba(128,128,128,0.1); cursor: pointer; }
+
+        .note-item { padding: 12px; border-radius: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #ccc; background: rgba(128,128,128,0.03); }
+        .status-danger { border-left-color: #ff7675; }
+
+        .chat-container { height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 12px; background: rgba(0,0,0,0.03); border-radius: 15px; margin-bottom: 10px; }
+        .msg { max-width: 85%; padding: 10px 14px; border-radius: 18px; font-size: 0.85em; line-height: 1.4; }
+        .msg.ai { background: var(--primary); color: white; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .msg.user { background: var(--accent); color: white; align-self: flex-end; border-bottom-right-radius: 2px; }
+
+        .news-item { padding: 12px 0; border-bottom: 1px solid rgba(128,128,128,0.1); }
+        input { width: 100%; padding: 12px; border-radius: 12px; border: 1px solid var(--accent); background: var(--card); color: var(--text); outline: none; font-size: 16px; }
+        footer { text-align: center; padding: 40px 10px; opacity: 0.7; border-top: 1px solid rgba(128,128,128,0.1); }
+        .dev-brand { font-weight: bold; color: var(--primary); text-transform: uppercase; letter-spacing: 3px; display: block; margin-top: 8px; }
+        
+        #weather-info { display: flex; align-items: center; justify-content: center; gap: 15px; padding: 10px; }
+        .weather-temp { font-size: 1.8em; font-weight: bold; color: var(--primary); }
+    </style>
+</head>
+<body>
+
+<div id="welcome-overlay">
+    <div class="card" style="text-align: center; width: 100%; max-width: 320px;">
+        <h2 style="color: var(--primary); margin: 0;">Acil Service</h2>
+        <p style="font-size: 0.8em; opacity: 0.7; margin-bottom: 20px;">Digital Assistant SMAN 1 Tumpang</p>
+        <p>Siapa namu kamu kak?</p>
+        <input type="text" id="name-input" placeholder="Ketik nama lo..." style="text-align: center;">
+        <button onclick="saveName()" style="width: 100%; margin-top: 15px;">Masuk Aplikasi</button>
+    </div>
+</div>
+
+<div class="container" id="main-app">
+    <header>
+        <h2 id="greeting-text">Halo!</h2>
+        <div class="theme-buttons">
+            <button onclick="setTheme('light')">Light</button>
+            <button onclick="setTheme('dark-soft')">Soft</button>
+            <button onclick="setTheme('cyber')">Cyber</button>
+        </div>
+        <p onclick="resetName()" style="cursor:pointer; font-size: 0.7em; opacity: 0.5; margin-top: 15px; text-decoration: underline;">Ganti User</p>
+    </header>
+
+    <div class="card">
+        <h3 style="margin-top:0; font-size: 1em;">🗓️ Jadwal ASTERIA</h3>
+        <div class="schedule-grid" id="schedule-render"></div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top:0; font-size: 1em;">📝 Deadline Notes</h3>
+        <div style="display:flex; flex-direction:column; gap:8px;">
+            <input type="text" id="note-text" placeholder="Ada tugas baru?">
+            <div style="display:flex; gap:8px;">
+                <input type="date" id="note-date" style="flex:1">
+                <button onclick="saveNote()" style="flex: 0.4;">Simpan</button>
+            </div>
+        </div>
+        <div id="notes-list" style="margin-top:15px;"></div>
+    </div>
+
+    <div class="card" style="text-align:center; border-right: 5px solid var(--primary);">
+        <div id="quote-display" style="font-style: italic; font-size: 0.9em;">"..."</div>
+        <button onclick="newQuote()" style="font-size:10px; margin-top:10px; background: none; color: var(--primary); border: 1px solid var(--primary); padding: 4px 8px;">Next Quote</button>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size: 1em;">💬 Teman Cerita (BETA)</h3>
+        <div class="chat-container" id="chat-box"></div>
+        <div style="display:flex; gap:8px;">
+            <input type="text" id="chat-input" placeholder="Curhat aja..." style="flex:1" onkeypress="if(event.key==='Enter') sendChat()">
+            <button onclick="sendChat()">Kirim</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size: 1em;">🌍 Berita Real-Time</h3>
+        <div id="news-container"></div>
+    </div>
+
+    <div class="card">
+        <h3 style="margin-top:0; font-size: 1em;">☁️ Ramalan Cuaca</h3>
+        <div id="weather-section">
+            <p id="weather-msg" style="font-size: 0.8em; text-align: center;">Butuh akses lokasi buat ramalan yang akurat, Bro.</p>
+            <button id="get-weather-btn" onclick="getWeather()" style="width:100%; font-size: 0.8em;">Izinkan Lokasi & Cek Cuaca</button>
+            <div id="weather-result" style="display:none;">
+                <div id="weather-info">
+                    <span class="weather-temp" id="temp-val">--°C</span>
+                    <div style="text-align:left;">
+                        <div id="weather-desc" style="font-weight:bold; text-transform:capitalize;">--</div>
+                        <div id="location-name" style="font-size:0.8em; opacity:0.7;">--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Stay Focus & Grow</p>
+        <span class="dev-brand">Dev by Acil service</span>
+    </footer>
+</div>
+
+<script>
+    // --- DATABASE ---
+    const schedule = {
+        "Senin": ["Pancasila", "Informatika", "B.Inggris", "Bader", "Geografi"],
+        "Selasa": ["B.Indonesia", "PJOK", "Matematika", "Sejarah"],
+        "Rabu": ["Kimia", "Fisika", "B.Inggris", "PKWU"],
+        "Kamis": ["Matematika", "Agama", "Bader", "Pancasila"],
+        "Jumat": ["Sosiologi", "B.Indonesia", "Ekonomi", "Biologi"]
+    };
+    const teachers = { "pancasila": "Bu Febi", "informatika": "Pak Arif", "b.inggris": "Bu Asih", "bader": "Bu Lila", "geografi": "Bu Loka", "b.indonesia": "Bu Azizah", "pjok": "Pak Alby", "matematika": "Bu Intarti", "sejarah": "Pak Andika", "kimia": "Bu Deny", "fisika": "Bu Dewi", "pkwu": "Bu Annisa", "agama": "Bu Ilun", "sosiologi": "Pak Afi", "ekonomi": "Bu Novita", "biologi": "Bu Bidri" };
+    const quotes = ["Kejar ambisimu sampai dia yang menolakmu dulu menyesal pernah menyia-nyiakanmu", "Belajar Fisika emang pusing tapi lebih pusing mikirin cara chat kamu duluan tanpa kelihatan baper", "Masa depan itu kayak soal Matematika yang rumit, kalau nggak dicoba ya nggak bakal ketemu jawabannya", "Jangan cuma jadi penonton kesuksesan orang lain sementara lo asik scroll TikTok sampai pagi", "Cinta monyet itu lucu tapi cinta yang serius itu yang mau berjuang bareng dari nol sampai jadi sesuatu", "Gapapa kalau hari ini lo merasa gagal karena besok pagi matahari tetap terbit buat kasih lo kesempatan kedua", "Suka sama teman sekelas itu risiko tinggi, kalau putus tiap hari harus kuat liat mukanya di jam pelajaran pertama", "Kurangi ekspektasi dan perbanyak aksi karena dunia nggak bakal kasih apa-apa buat mereka yang cuma bisa mimpi", "Kamu itu variabel paling sulit di dalam hidupku, dicari susah tapi selalu muncul di setiap pikiran", "Jangan terlalu nyaman di zona nyaman karena di luar sana orang lain lagi lari buat nyalip posisi lo", "Masa SMA bakal berakhir tapi ambisi buat masuk kampus impian harus tetap menyala sampai benar-benar tercapai", "Kadang kita cuma rindu kenangannya bukan orangnya, jadi jangan biarkan masa lalu menghambat langkah maju lo", "Investasi ke otak sendiri itu jauh lebih mahal daripada beli outfit bermerk cuma buat pamer di depan teman", "Cinta nggak perlu sempurna yang penting dia bisa terima lo apa adanya pas lo lagi di titik terendah", "Dunia ini luas jadi jangan biarkan satu orang yang nggak menghargaimu bikin dunia lo terasa sempit dan gelap", "Mental pejuang itu nggak bakal tumbang cuma gara-gara satu kali penolakan baik itu soal cinta maupun cita-cita", "Fokus perbaiki kualitas diri dulu nanti orang yang tepat bakal datang tanpa harus lo paksa-paksa", "Masa depan cerah nggak dibangun dalam semalam tapi dibangun dari setiap buku yang lo baca dan setiap keringat yang lo buang", "Jangan baper sama perhatian kecil siapa tahu dia emang ramah ke semua orang termasuk ke saingan lo", "Sukses itu butuh proses yang lama bukan instan kayak mie yang lo makan pas lagi begadang ngerjain tugas", "Kamu adalah penyemangat sekolahku tapi juga alasan kenapa aku sering melamun pas guru lagi jelasin materi", "Jadilah versi terbaik dari dirimu sendiri bukan sekadar fotokopi dari idola yang lo liat di media sosial", "Cinta itu kayak trading kalau lo nggak tahu kapan harus berhenti lo bakal rugi waktu dan perasaan", "Berhenti membandingkan hidupmu dengan postingan orang lain karena setiap orang punya timeline dan ujiannya masing-masing", "Tujuan kita bukan cuma buat lulus sekolah tapi buat jadi orang yang berguna dan punya nilai di mata dunia", "Mencintai dalam diam itu seni paling melelahkan karena lo harus jago akting pura-pura nggak tahu padahal cemburu", "Siapkan bekal masa depan selagi masih muda biar nanti pas tua lo tinggal duduk manis menikmati hasil kerja keras", "Jangan buang air mata buat orang yang bahkan nggak mikirin apakah lo udah makan atau belum hari ini", "Pendidikan itu kunci tapi skill dan adab itu pintu yang bakal nuntun lo ke tempat yang lebih tinggi", "Cinta itu soal kecocokan frekuensi kalau frekuensinya beda mau dipaksa kayak gimana pun bakal tetap berisik", "Masa depan ada di tanganmu sendiri jadi pastikan tanganmu cukup kuat buat memegang tanggung jawab yang besar", "Pura-pura nggak lihat pas papasan padahal jantung mau copot itu adalah olahraga paling ekstrem di sekolah", "Jangan takut salah pas belajar karena kesalahan adalah guru terbaik yang nggak bakal lo dapetin di buku paket", "Kamu itu kayak masa depanku, penuh teka-teki tapi aku mau terus berusaha buat dapetin kamu seutuhnya", "Disiplin hari ini adalah kemudahan di masa depan jadi jangan malas buat bangun pagi dan kejar impian", "Kalau dia beneran sayang dia nggak bakal bikin lo bingung dengan kode-kodean yang nggak ada ujungnya", "Mimpi boleh tinggi tapi kaki harus tetap menginjak bumi biar kalau jatuh lo nggak terlalu sakit hati", "Jangan jadikan pacaran sebagai alasan buat bolos sekolah tapi jadikan dia alasan buat rajin belajar biar sukses bareng", "Waktu adalah aset paling berharga yang lo punya sekarang jadi jangan dihabiskan buat hal yang nggak ada gunanya", "Ketulusan itu terasa di hati bukan cuma terdengar di telinga lewat janji-janji manis yang nggak ada buktinya", "Jadilah orang sukses yang tetap rendah hati biar orang lain segan bukan karena lo pamer tapi karena karya", "Cemburu itu tanda sayang tapi kalau berlebihan itu tanda lo kurang kerjaan dan kurang fokus ke masa depan", "Luka hati obatnya bukan orang baru tapi waktu dan keberanian untuk memaafkan diri sendiri atas kesalahan masa lalu", "Setiap tantangan di sekolah adalah simulasi buat menghadapi kerasnya dunia nyata setelah lo lulus nanti", "Jangan terlalu berharap sama manusia karena kecewanya bisa bikin lo trauma buat mulai sesuatu yang baru lagi", "Belajar mengelola keuangan sejak remaja adalah langkah awal menuju kebebasan finansial di masa dewasa nanti", "Hubungan tanpa status itu kayak lari di treadmill, capeknya dapet tapi nggak bakal maju-maju sampai kapanpun", "Konsistensi adalah kunci dari keberhasilan karena lebih baik sedikit tapi tiap hari daripada banyak tapi cuma sekali", "Kamu itu alasan aku semangat berangkat pagi-pagi padahal jadwal pelajaran hari ini bikin pengen bolos aja", "Jangan biarkan gadget mengendalikan waktumu tapi gunakan teknologi buat mendukung mimpi-mimpi besarmu", "Cinta sejati itu yang saling mendukung buat jadi lebih baik bukan yang saling mengekang sampai ruang gerak terbatas", "Masa muda cuma sekali jadi manfaatkan buat cari pengalaman sebanyak-banyaknya biar nggak menyesal di masa tua", "Jangan takut kelihatan beda kalau itu buat kebaikan masa depanmu daripada ikut-ikutan tren yang nggak ada faedahnya", "Mantan itu alumni hati nggak usah sering-sering kunjungan industri nanti gagal move on lagi", "Kerja cerdas itu lebih efektif daripada sekadar kerja keras jadi gunakan otakmu buat cari jalan keluar yang kreatif", "Percayalah pada potensimu meski dunia meragukanmu karena yang tahu batas kemampuanmu cuma diri lo sendiri", "Mencintai itu belajar mengikhlaskan jika memang dia ditakdirkan buat orang lain dan bukan buat lo", "Sukses butuh pengorbanan entah itu waktu main sama teman atau waktu tidur yang berkurang buat belajar", "Jangan jadi orang yang gampang menyerah karena pemenang sejati adalah mereka yang tetap bertahan pas yang lain berhenti", "Quotes galau di story itu sebenarnya cuma buat satu orang tapi sayangnya dia malah asik chat sama yang lain", "Hargai setiap proses kecil yang lo lalui karena gunung yang tinggi pun didaki mulai dari langkah pertama", "Jangan buru-buru pacaran cuma karena teman sekelas udah semua, nikmatin aja masa jomblo lo buat upgrade diri", "Integritas itu mata uang yang berlaku di mana saja jadi tetaplah jujur meski nggak ada orang yang melihat", "Cinta itu kayak catur kalau salah langkah sedikit aja ratu lo bisa diambil orang lain", "Masa depan yang cerah nggak datang secara kebetulan tapi datang karena persiapan yang matang sejak dini", "Tetaplah jadi orang baik meski pernah dikecewakan berkali-kali karena kebaikan bakal balik ke lo dengan cara yang unik", "Jangan bandingkan bab pertama hidupmu dengan bab kedua puluh orang lain karena start setiap orang itu beda", "Terlalu nyaman jadi teman adalah jebakan paling menyakitkan yang pernah ada di sejarah percintaan remaja", "Terkadang melepaskan adalah cara mencintai yang paling tulus daripada memaksakan sesuatu yang udah nggak bisa nyambung", "Gagal di ujian sekolah bukan akhir dunia tapi peringatan buat lo biar lebih serius lagi belajar kedepannya", "Kamu adalah variabel x yang susah dicari tapi selalu ada di dalam setiap soal ujian hidupku", "Masa remaja adalah waktu buat bereksperimen jadi jangan takut buat mencoba hal-hal baru yang positif", "Cinta nggak perlu mewah yang penting ada pas lagi susah dan bisa diajak berjuang bareng-bareng", "Fokus pada solusi bukan pada siapa yang salah karena mengeluh nggak bakal nyelesein masalah yang lo hadapi", "Jadikan kritik sebagai bahan bakar buat membuktikan kalau mereka salah menilai kemampuan yang lo punya", "Kenapa harus takut ditolak setidaknya lo udah berani buat nyatain perasaan daripada dipendam sampai jadi beban", "Dunia nggak berhenti berputar cuma karena lo putus cinta jadi hapus air matamu dan mulai fokus ke masa depan", "Belajar mencintai diri sendiri sebelum memutuskan buat mencintai orang lain agar lo nggak kehilangan jati diri", "Keberhasilan butuh kesabaran karena nggak ada yang instan di dunia ini kecuali mie instan yang lo masak di dapur", "Suka sama teman satu circle itu rumit, kalau berantem satu tongkrongan rasanya jadi canggung semua", "Pahami perbedaan antara kebutuhan dan keinginan biar keuangan lo tetap sehat sampai akhir bulan nanti", "Setia itu pilihan bukan karena nggak ada godaan tapi karena lo tahu siapa yang layak buat dipertahankan", "Jaga kesehatan fisik karena badan yang sehat adalah modal utama buat mengejar semua mimpi-mimpimu", "Jangan biarkan kegagalan kemarin menghambat langkahmu hari ini karena setiap hari adalah lembaran baru yang bersih", "Cinta itu soal chemistry yang datang dengan sendirinya tanpa perlu dipaksa atau dibuat-buat", "Tetaplah haus akan ilmu pengetahuan karena dunia terus berubah dan lo harus bisa beradaptasi dengan cepat", "Jarak itu ujian kalau kalian lolos berarti kalian memang pantas buat dipersatukan di masa depan nanti", "Masa depan ada di tanganmu jadi pastikan tanganmu kuat buat memegang kendali atas hidupmu sendiri", "Jangan sombong kalau udah di atas ingat siapa yang selalu ada nemenin lo pas lo masih bukan siapa-siapa", "Berbagi duka itu berat tapi berbagi tawa sama orang yang disayang itu nikmatnya nggak ada duanya", "Cari teman yang bikin lo pengen jadi orang yang lebih baik bukan teman yang malah ngajak ke jalan yang salah", "Persahabatan sejati nggak bakal lekang oleh waktu dan jarak meski masing-masing sibuk mengejar cita-citanya", "Loyalitas itu mahal jadi jangan harapkan itu dari orang yang cuma mau ada pas lo lagi senang aja", "Bantu teman yang lagi kesusahan karena roda hidup selalu berputar dan mungkin besok lo yang butuh bantuan dia", "Serunya persahabatan itu pas kita bisa sukses bareng-bareng dan saling bangga atas pencapaian masing-masing", "Jangan biarkan masalah sepele mutusin tali silaturahmi yang udah dibangun selama bertahun-tahun lamanya", "Teman yang selalu positif itu energi tambahan buat hidup lo biar nggak gampang menyerah sama keadaan", "Bersyukur punya orang tua yang masih mau dengerin keluh kesah lo pas lo lagi capek sama urusan sekolah", "Masa muda penuh warna karena ada sahabat di samping kita yang selalu siap buat diajak gila-gilaan bareng", "Tetaplah solid meski badai masalah datang menerjang karena kebersamaan adalah kekuatan yang sesungguhnya", "Jangan tunda pekerjaan hari ini buat besok karena besok punya tantangan dan kejutan yang beda lagi"];
+
+    // --- CORE ---
+    function saveName() {
+        const n = document.getElementById('name-input').value;
+        if(n.trim()) { localStorage.setItem('acil_user_v63', n); checkUser(); }
+    }
+
+    function checkUser() {
+        const n = localStorage.getItem('acil_user_v63');
+        if(n) {
+            document.getElementById('welcome-overlay').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            document.getElementById('greeting-text').innerText = `Halo, ${n}! 👋`;
+            initApp();
+        }
+    }
+
+    function resetName() {
+        if(confirm("Ganti user?")) { localStorage.removeItem('acil_user_v63'); window.location.reload(); }
+    }
+
+    function setTheme(t) { 
+        document.body.setAttribute('data-theme', t); 
+        localStorage.setItem('acil_theme_v63', t); 
+    }
+
+    function initApp() {
+        const name = localStorage.getItem('acil_user_v63');
+        renderSchedule(); renderNotes(); updateNews(name); newQuote();
+        initChat(name);
+    }
+
+    // --- FEATURES ---
+    function renderSchedule() {
+        const container = document.getElementById('schedule-render'); container.innerHTML = "";
+        for (let day in schedule) {
+            let html = `<div class="day-box"><b>${day}</b>`;
+            schedule[day].forEach(sub => { html += `<span class="subject-tag" onclick="alert('Guru: ${teachers[sub.toLowerCase()]}')">${sub}</span>`; });
+            container.innerHTML += html + `</div>`;
+        }
+    }
+
+    function saveNote() {
+        const t = document.getElementById('note-text').value; const d = document.getElementById('note-date').value;
+        if(!t || !d) return;
+        const notes = JSON.parse(localStorage.getItem('acil_notes_v63') || '[]');
+        notes.push({ id: Date.now(), text: t, date: d });
+        localStorage.setItem('acil_notes_v63', JSON.stringify(notes));
+        renderNotes(); document.getElementById('note-text').value='';
+    }
+
+    function renderNotes() {
+        const container = document.getElementById('notes-list');
+        const notes = JSON.parse(localStorage.getItem('acil_notes_v63') || '[]');
+        const today = new Date(); today.setHours(0,0,0,0);
+        if (notes.length === 0) { container.innerHTML = `<p style="text-align:center; opacity:0.5; font-size:0.8em;">Bersih dari deadline!</p>`; return; }
+        container.innerHTML = notes.sort((a,b) => new Date(a.date) - new Date(b.date)).map(n => {
+            const diffDays = Math.ceil((new Date(n.date) - today) / 86400000);
+            let rem = diffDays === 0 ? "HARI INI!" : (diffDays < 0 ? "Lewat!" : `${diffDays} hr lagi`);
+            return `<div class="note-item ${diffDays <= 1 ? 'status-danger' : ''}"><div><small><b>${rem}</b></small><br>${n.text}</div><span onclick="deleteNote(${n.id})">✕</span></div>`;
+        }).join('');
+    }
+
+    function deleteNote(id) {
+        let n = JSON.parse(localStorage.getItem('acil_notes_v63') || '[]');
+        localStorage.setItem('acil_notes_v63', JSON.stringify(n.filter(x => x.id !== id)));
+        renderNotes();
+    }
+
+    function sendChat() {
+        const input = document.getElementById('chat-input'); const box = document.getElementById('chat-box');
+        const name = localStorage.getItem('acil_user_v63');
+        if(!input.value.trim()) return;
+        box.innerHTML += `<div class="msg user">${input.value}</div>`;
+        setTimeout(() => {
+            box.innerHTML += `<div class="msg ai">Gue dengerin kok, ${name}. Terus ceritanya gimana?</div>`;
+            box.scrollTop = box.scrollHeight;
+        }, 700);
+        input.value = ''; box.scrollTop = box.scrollHeight;
+    }
+
+    function initChat(name) { document.getElementById('chat-box').innerHTML = `<div class="msg ai">Yo ${name}! Ada cerita apa hari ini?</div>`; }
+
+    async function updateNews(name) {
+        const container = document.getElementById('news-container');
+        container.innerHTML = `<p style="font-size:0.7em; text-align:center;">Lagi ambil berita buat lo...</p>`;
+        try {
+            const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://news.google.com/rss?hl=id&gl=ID&ceid=ID:id');
+            const data = await res.json();
+            if(data.status === 'ok') {
+                container.innerHTML = data.items.slice(0, 3).map(item => `
+                    <div class="news-item">
+                        <div style="font-size:0.85em; font-weight:500;"><a href="${item.link}" target="_blank" style="text-decoration:none; color:inherit;">${item.title}</a></div>
+                        <small style="font-size:0.7em; opacity:0.6;">${item.author || 'News'} • 2026</small>
+                    </div>`).join('');
+            }
+        } catch (e) { container.innerHTML = "Gagal muat berita."; }
+    }
+
+    // --- WEATHER SYSTEM ---
+    function getWeather() {
+        const btn = document.getElementById('get-weather-btn');
+        btn.innerText = "Mengakses lokasi...";
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                try {
+                    const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                    const data = await res.json();
+                    if(data.current_weather) {
+                        btn.style.display = 'none';
+                        document.getElementById('weather-msg').style.display = 'none';
+                        document.getElementById('weather-result').style.display = 'block';
+                        document.getElementById('temp-val').innerText = Math.round(data.current_weather.temperature) + "°C";
+                        document.getElementById('weather-desc').innerText = "Cerah Berawan"; // Static placeholder for demo
+                        document.getElementById('location-name').innerText = "Sekitar Malang & sekitarnya";
+                    }
+                } catch (e) { alert("Gagal ambil data cuaca."); }
+            }, () => { alert("Akses lokasi ditolak. Cek pengaturan browser lo."); });
+        }
+    }
+
+    function newQuote() { document.getElementById('quote-display').innerText = `"${quotes[Math.floor(Math.random()*quotes.length)]}"`; }
+
+    window.onload = () => { 
+        checkUser(); 
+        if(localStorage.getItem('acil_theme_v63')) setTheme(localStorage.getItem('acil_theme_v63')); 
+    };
+</script>
+</body>
+</html>
